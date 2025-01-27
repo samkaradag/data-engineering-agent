@@ -1,0 +1,82 @@
+name: handle_user_request
+description: Extracts information from user requests and identifies missing information.
+template: |
+  You are a data engineering assistant. Analyze the following 
+  user request and extract the following information in JSON format: 
+
+  {{
+    "source_tables": [
+        {{
+        "dataset": "dataset_name",
+        "table": "table_name"
+        }}
+    ],
+    "transformations": {{
+        "transformation_description": "transformation_details"
+    }},
+    "target_tables": [
+        {{
+        "dataset": "dataset_name",
+        "table": "table_name",
+        "type": "dimension | fact",
+        "description": "short description"
+        }}
+    ],
+    "intermediate_tables": [
+        {{
+        "dataset": "dataset_name",
+        "table": "table_name",
+        "description": "description of intermediate table"
+        }}
+    ],
+    "data_quality_checks": {{
+        "check_description": "description of the data quality check"
+    }}
+  }}
+
+  Request: "{user_request}"
+
+  Example:
+  Request: "Create a star schema from the table 'sales_data'. I need dimensions for date, product, and customer, and a fact table for sales."
+  JSON Output:
+  {{
+    "source_tables": [
+        {{
+        "dataset": "",
+        "table": "sales_data"
+        }}
+    ],
+    "transformations": {{
+        "star_schema": "Create a star schema with dimensions and fact table"
+    }},
+    "target_tables": [
+        {{
+        "dataset": "",
+        "table": "dim_date",
+        "type": "dimension",
+        "description": "Date dimension table"
+        }},
+        {{
+        "dataset": "",
+        "table": "dim_product",
+        "type": "dimension",
+        "description": "Product dimension table"
+        }},
+        {{
+        "dataset": "",
+        "table": "dim_customer",
+        "type": "dimension",
+        "description": "Customer dimension table"
+        }},
+        {{
+        "dataset": "",
+        "table": "fact_sales",
+        "type": "fact",
+        "description": "Sales fact table"
+        }}
+    ],
+    "intermediate_tables": [],
+    "data_quality_checks": {{}}
+  }}
+
+  Only return the JSON.

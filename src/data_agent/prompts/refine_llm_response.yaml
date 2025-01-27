@@ -1,0 +1,14 @@
+name: refine_llm_response
+description: Refines the LLM prompt based on the previous response.
+template: |
+  For the following prompt:
+  {prompt}
+
+  LLM returned:
+  {previous_response}
+
+  Which caused the following error during parsing the output:
+  {error}
+  
+  Refine and correct the LLM response.
+  Only respond with the JSON formatted text, nothing else.

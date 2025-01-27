@@ -1,0 +1,492 @@
+Dataform core sample scripts 
+
+bookmark_border
+This document shows example Dataform core and JavaScript scripts that you can use to create a SQL workflow in Dataform.
+
+Creating tables
+Creating a view with Dataform core
+The following code sample shows definition of a view called new_view in the definitions/new_view.sqlx file:
+
+
+
+config { type: "view" }
+
+SELECT * FROM source_data
+
+
+Creating a materialized view with Dataform core
+The following code sample shows definition of a materialized view called new_materialized_view in the definitions/new_materialized_view.sqlx file:
+
+
+
+config {
+  type: "view",
+  materialized: true
+}
+
+SELECT * FROM source_data
+
+
+Creating a table with Dataform core
+The following code sample shows definition of a table called new_table in the definitions/new_table.sqlx file:
+
+
+
+config { type: "table" }
+
+SELECT * FROM source_data
+
+
+Creating an incremental table with Dataform core
+The following code sample shows an incremental table that incrementally processes rows of the productiondb.logs table:
+
+
+
+config { type: "incremental" }
+
+SELECT timestamp, message FROM ${ref("productiondb", "logs")}
+
+${when(incremental(), `WHERE timestamp > (SELECT MAX(timestamp) FROM ${self()})`) }
+
+
+Using the ref function to reference tables with Dataform core
+The following code sample shows the ref function used to reference the source_data table in the definitions/new_table_with_ref.sqlx table definition file:
+
+
+
+config { type: "table" }
+
+SELECT * FROM ${ref("source_data")}
+Adding documentation to a table, view, or declaration with Dataform core
+The following code sample shows table and columns descriptions in the definitions/documented_table.sqlx table definition file:
+
+
+
+config { type: "table",
+         description: "This table is an example",
+         columns:{
+             user_name: "Name of the user",
+             user_id: "ID of the user"
+      }
+  }
+
+SELECT user_name, user_id FROM ${ref("source_data")}
+
+
+Configuring incremental tables
+Adding new table rows for new dates in source data with Dataform core
+The following code sample shows a configuration of an incremental table in the definitions/incremental_table.sqlx file. In this configuration, Dataform appends a new row to the incremental_table for each new date:
+
+
+
+config { type: "incremental" }
+
+SELECT date(timestamp) AS date, action
+FROM weblogs.user_actions
+
+${ when(incremental(), `WHERE timestamp > (select max(date) FROM ${self()})`)
+
+
+Taking a snapshot of a table periodically with Dataform core
+The following code sample shows a configuration of an incremental table in the definitions/snapshots_table.sqlx file. In this configuration, Dataform creates snapshots_table with a snapshot of productiondb.customers at the specified date:
+
+
+
+config { type: "incremental" }
+
+SELECT current_date() AS snapshot_date, customer_id, name, account_settings FROM productiondb.customers
+
+${ when(incremental(), `WHERE snapshot_date > (SELECT max(snapshot_date) FROM ${self()})`) }
+
+
+Building a rolling 30-days table that updates incrementally with Dataform core
+The following code sample shows a configuration of an incremental table in the definitions/incremental_example.sqlx file. In this configuration, Dataform creates a temporary incremental_example that updates incrementally, and deletes the table after 30 days from its creation:
+
+
+
+config {type: "incremental"}
+
+post_operations {
+  delete FROM ${self()} WHERE date < (date_add(Day, -30, CURRENT_DATE))
+}
+
+SELECT
+ date(timestamp) AS date,
+ order_id,
+FROM source_table
+  ${ when(incremental(), `WHERE timestamp > (SELECT max(date) FROM ${self()})`) }
+
+
+Creating custom SQL operations
+Running several SQL operations in a SQLX file with Dataform core
+The following code sample shows ; used to separate multiple SQL operations defined in definitions/operations.sqlx:
+
+
+
+config { type: "operations" }
+
+DELETE FROM datatable where country = 'GB';
+DELETE FROM datatable where country = 'FR';
+
+
+Running custom SQL before creating a table with Dataform core
+The following code sample shows a custom SQL operation defined in the pre_operations block of the definitions/table_with_preops.sqlx table definition file:
+
+
+
+config {type: "table"}
+
+SELECT * FROM ...
+
+pre_operations {
+  INSERT INTO table ...
+}
+
+
+Running custom SQL after creating a table with Dataform core
+The following code sample shows a custom SQL operation defined in the post_operations block of the definitions/table_with_postops.sqlx table definition file:
+
+
+
+config {type: "table"}
+
+SELECT * FROM ...
+
+post_operations {
+  GRANT `roles/bigquery.dataViewer`
+  ON
+  TABLE ${self()}
+  TO "group:allusers@example.com", "user:otheruser@example.com"
+}
+
+
+Validating tables
+Adding assertions to a table, view, or declaration with Dataform core
+The following code sample shows uniqueKey, nonNull, and rowConditions assertions added to the definitions/tested_table.sqlx table definition file:
+
+
+
+config {
+  type: "table",
+  assertions: {
+    uniqueKey: ["user_id"],
+    nonNull: ["user_id", "customer_id"],
+    rowConditions: [
+      'signup_date is null or signup_date > "2022-01-01"',
+      'email like "%@%.%"'
+    ]
+  }
+}
+SELECT ...
+
+
+Adding a custom assertion with Dataform core
+The following code sample shows a custom assertion in a table definition file that validates if columns a, or b, or c from source_data are null:
+
+
+
+config { type: "assertion" }
+
+SELECT
+  *
+FROM
+  ${ref("source_data")}
+WHERE
+  a is null
+  or b is null
+  or c is null
+
+
+Developing with JavaScript
+Using inline variables and functions with JavaScript
+The following code sample shows the foo variable defined in a js block and then used inline in a SQLX file:
+
+
+
+js {
+ const foo = 1;
+ function bar(number){
+     return number+1;
+ }
+}
+
+SELECT
+ ${foo} AS one,
+ ${bar(foo)} AS two
+
+
+Generating one table per country with JavaScript
+The following code sample shows the use of the forEach function to generate one table per each country defined in countries in the definitions/one_table_per_country.js file:
+
+
+
+const countries = ["GB", "US", "FR", "TH", "NG"];
+
+countries.forEach(country => {
+  publish("reporting_" + country)
+    .dependencies(["source_table"])
+    .query(
+      ctx => `
+      SELECT '${country}' AS country
+      `
+    );
+});
+
+
+Declaring multiple sources within one file with JavaScript
+The following code sample shows declaration of multiple data sources in the definitions/external_dependencies.js file:
+
+
+
+declare({
+  schema: "stripe",
+  name: "charges"
+});
+
+declare({
+  schema: "shopify",
+  name: "orders"
+});
+
+declare({
+  schema: "salesforce",
+  name: "accounts"
+});
+
+
+Declaring multiple sources within one file using forEach
+The following code sample shows declaration of multiple data sources with the forEach function in the definitions/external_dependencies.js file:
+
+
+
+["charges", "subscriptions", "line_items", "invoices"]
+  .forEach(source => declare({
+      schema: "stripe",
+      name: source
+    })
+  );
+
+
+Deleting sensitive information in all tables containing PII with JavaScript
+The following code sample shows a function in the definitions/delete_pii.js file that deletes selected information in all tables that contain personal identifiable information (PII):
+
+
+
+const pii_tables = ["users", "customers", "leads"];
+pii_tables.forEach(table =>
+  operate(`gdpr_cleanup: ${table}`,
+    ctx => `
+      DELETE FROM raw_data.${table}
+      WHERE user_id in (SELECT * FROM users_who_requested_deletion)`)
+      .tags(["gdpr_deletion"]))
+);
+
+
+Adding preOps and postOps with JavaScript
+The following code sample shows the publish function used to create a query with preOps and postOps in the definitions/pre_and_post_ops_example.js table:
+
+
+
+publish("example")
+  .preOps(ctx => `GRANT \`roles/bigquery.dataViewer\` ON TABLE ${ctx.ref("other_table")} TO "group:automation@example.com"`)
+  .query(ctx => `SELECT * FROM ${ctx.ref("other_table")}`)
+  .postOps(ctx => `REVOKE \`roles/bigquery.dataViewer\` ON TABLE ${ctx.ref("other_table")} TO "group:automation@example.com"`)
+
+Creating incremental tables with JavaScript
+The following code sample shows the publish function used to create an incremental table in the definitions/incremental_example.js file:
+
+
+
+publish("incremental_example", {
+  type: "incremental"
+}).query(ctx => `
+  SELECT * FROM ${ctx.ref("other_table")}
+  ${ctx.when(ctx.incremental(),`WHERE timestamp > (SELECT MAX(date) FROM ${ctx.self()}`)}
+`)
+
+
+Backfilling a daily table with JavaScript
+The following code sample shows backfilling a table that updates daily in the definitions/backfill_daily_data.js file:
+
+
+
+var getDateArray = function(start, end) {
+  var startDate = new Date(start); //YYYY-MM-DD
+  var endDate = new Date(end); //YYYY-MM-DD
+
+  var arr = new Array();
+  var dt = new Date(startDate);
+  while (dt <= endDate) {
+    arr.push(new Date(dt).toISOString().split("T")[0]);
+    dt.setDate(dt.getDate() + 1);
+  }
+  return arr;
+};
+
+var dateArr = getDateArray("2020-03-01", "2020-04-01");
+
+// step 1: create table
+operate(`create table`, 'create table if not exists backfill_table (`fields`) `);
+// step 2: insert into the table
+
+dateArr.forEach((day, i) =>
+  operate(`backfill ${day}`
+   `insert into backfill_table select fields where day = '${day}'`)
+);
+
+
+Reusing code with includes
+Using global variables with JavaScript
+The following code sample shows definition of project_id and first_date constants in the includes/constants.js:
+
+const project_id = "project_id";
+const first_date = "'1970-01-01'";
+module.exports = {
+  project_id,
+  first_date
+};
+The following code sample shows the first_date constant referenced in the definitions/new_table.sqlx file:
+
+
+
+config {type: "table"}
+
+SELECT * FROM source_table WHERE date > ${constants.first_date}
+
+
+Creating a country mapping with JavaScript
+The following code sample shows the country_group custom function defined in the includes/mapping.js file:
+
+
+
+function country_group(country){
+  return `
+  case
+    when ${country} in ('US', 'CA') then 'NA'
+    when ${country} in ('GB', 'FR', 'DE', 'IT', 'PL', 'SE') then 'EU'
+    when ${country} in ('AU') then ${country}
+    else 'Other'
+  end`;
+}
+
+module.exports = {
+   country_group
+};
+
+The following code sample shows a table definition that uses the country_group function in the definitions/new_table.sqlx table definition file:
+
+
+
+config { type: "table"}
+
+SELECT
+  country AS country,
+  ${mapping.country_group("country")} AS country_group,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM ${ref("source_table")}
+
+GROUP BY 1, 2, 3
+The following code sample shows the query defined in definitions/new_table.sqlx compiled to SQL:
+
+
+
+SELECT
+  country AS country,
+  case
+    when country in ('US', 'CA') then 'NA'
+    when country in ('GB', 'FR', 'DE', 'IT', 'PL', 'SE') then 'EU'
+    when country in ('AU') then country
+    else 'Other'
+  end AS country_group,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM "dataform"."source_table"
+
+GROUP BY 1, 2, 3
+
+
+Generating a SQL script with a custom JavaScript function
+The following code sample shows the render_script custom function defined in includes/script_builder.js:
+
+
+
+function render_script(table, dimensions, metrics) {
+  return `
+      SELECT
+      ${dimensions.map(field => `${field} AS ${field}`).join(",")},
+      ${metrics.map(field => `sum(${field}) AS ${field}`).join(",\n")}
+      FROM ${table}
+      GROUP BY ${dimensions.map((field, i) => `${i + 1}`).join(", ")}
+    `;
+}
+
+module.exports = { render_script };
+
+
+The following code sample shows a table definition that uses the render_script function in the definitions/new_table.sqlx table definition file:
+
+
+
+config {
+    type: "table",
+    tags: ["advanced", "hourly"],
+    disabled: true
+}
+
+${script_builder.render_script(ref("source_table"),
+                               ["country", "device_type"],
+                               ["revenue", "pageviews", "sessions"]
+                               )}
+The following code sample shows the query defined in definitions/new_table.sqlx compiled to SQL:
+
+
+
+SELECT
+  country AS country,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM "dataform"."source_table"
+
+GROUP BY 1, 2
+Actions configs
+Loading SQL files with action configs
+Action configs facilitate loading pure SQL files. You can define action configs in actions.yaml files in the definitions folder.
+
+For more information about available action types and valid action configs options, see the Dataform Configs Reference.
+
+The following code sample shows definition of a view called new_view in the definitions/actions.yaml file:
+
+
+
+actions:
+  - view:
+    filename: new_view.sql
+The definitions/new_view.sql SQL file, referenced by the preceding code sample, contains pure SQL:
+
+SELECT * FROM source_data
+
+
+Some important considerations regarding dataform sqlx file formats
+- SQLX files must be in definitions folder. Dataform doesn't compile .sqlx files outside the definitions/ folder. Your .sqlx files must be saved inside the definitions/ folder to compile and be included in your workflow executions.
+- Semi-colons are not allowed at the end of SQL statements.
+- If the ${ref(xxx)} references is a bigquery table. Provide an empty config file for those tables
+    Example: if ${ref("dataset_name", "table_name")} is used in any sqlx
+    include separate sqlx file like table_name.sqlx with contents:  
+    config {
+      type: "table",
+      schema: "new_york_taxi_trips",
+      name: "tlc_green_trips_2023"
+    }
+- do not put comments at the end of lines in the config part or sql part.
+- do not use project_id in fully qualified tables.
+- if target dataset is not defined use the dataset "dataform"

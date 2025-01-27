@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "genai-data-agent"
+version = "0.1.0"
+description = "Data Agent for BigQuery"
+authors = ["sametkaradag <sametkaradag@gmail.com>"]
+license = "Google"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+google-cloud-aiplatform = "^1.71.0"
+google-cloud-bigquery = "^3.27.0"
+crew = "^0.9.2"
+vertexai = "^1.71.1"
+google-cloud-dataform = "^0.5.13"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

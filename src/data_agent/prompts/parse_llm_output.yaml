@@ -1,0 +1,29 @@
+name: parse_llm_output
+description: Parses LLM output to identify files for upload to Dataform.
+template: |
+  You generated the following Dataform code:
+  
+  ```
+  {llm_output}
+  ```
+
+  Now, your task is to parse this code and extract the individual files. 
+
+  Structure your response as a JSON object.
+  Example output:
+  {{
+  "files": [
+      {{
+      "path": "definitions/file1.sqlx",
+      "content": "SQLX code for file1"
+      }},
+      {{
+      "path": "definitions/file2.sqlx",
+      "content": "SQLX code for file2"
+      }},
+      ...
+  ]
+  }}
+
+  Make sure to accurately capture the file paths and their corresponding code content.
+  

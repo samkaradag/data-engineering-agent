@@ -1,0 +1,341 @@
+-- Example 1: Simple table definition
+/* File: definitions/example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "my_simple_table",
+  description: "A simple table to demonstrate Dataform SQLX"
+}
+
+SELECT
+    1 as id,
+    'Samet' as name
+
+-- Example 2: Incremental table
+/* File: definitions/incremental_example.sqlx */
+config {
+  type: "incremental",
+  schema: "your_dataset",
+  name: "my_incremental_table",
+  description: "An incremental table example"
+}
+
+SELECT
+    event_id,
+    event_timestamp,
+    event_name
+FROM
+    ${ref("your_dataset", "source_events")}
+WHERE
+    ${when(incremental(), `event_timestamp > (SELECT MAX(event_timestamp) FROM ${self()})`)}
+
+-- Example 3: Using a JavaScript block for complex logic
+/* File: definitions/js_block_example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "js_block_example",
+  description: "Example using JavaScript for complex logic"
+}
+
+js {
+  function calculateComplexValue(input) {
+    // Some complex logic here
+    return input * 2;
+  }
+}
+
+SELECT
+    id,
+    ${calculateComplexValue(ref("your_dataset", "some_table").id)} as complex_value
+FROM
+    ${ref("your_dataset", "some_table")}
+
+-- Example 4: Defining a view with a dependency
+/* File: definitions/view_example.sqlx */
+config {
+  type: "view",
+  schema: "your_dataset",
+  name: "my_view",
+  description: "A view that depends on a table",
+  dependencies: ["my_simple_table"]
+}
+
+SELECT
+    id,
+    name
+FROM
+    ${ref("my_simple_table")}
+
+-- Example 5: Using assertions for data quality checks
+/* File: definitions/assertions_example.sqlx */
+config {
+  type: "assertion",
+  schema: "your_dataset",
+  name: "not_null_id_assertion",
+  description: "Assert that the id column in my_simple_table is not null"
+}
+
+SELECT * FROM ${ref("my_simple_table")} WHERE id IS NULL
+
+-- Example 6: Defining operations
+/* File: definitions/operations_example.sqlx */
+config {
+  type: "operations",
+  hasOutput: true,
+  schema: "your_dataset"
+}
+
+-- Create a stored procedure or other operations
+CREATE OR REPLACE PROCEDURE your_dataset.my_procedure(input INT64)
+BEGIN
+  -- Procedure logic here
+  SELECT input;
+END;
+
+-- Example 7: Working with external data sources
+/* File: definitions/external_data_example.sqlx */
+config {
+  type: "declaration",
+  schema: "your_dataset",
+  name: "external_table",
+  description: "Declare an external table"
+}
+
+-- Assume an external table already exists in BigQuery
+
+-- Example 8: Using Dataform API to fetch project metadata
+/* File: definitions/dataform_api_example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "dataform_project_metadata",
+  description: "Fetches Dataform project metadata"
+}
+
+js {
+  const dataform = require("@dataform/core");
+  const project = dataform.projectConfig;
+}
+
+SELECT
+  '${project.defaultSchema}' as default_dataset,
+  '${project.defaultLocation}' as default_location
+
+-- Example 9: Conditional table creation based on environment
+/* File: definitions/conditional_table_example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: `my_table_${dataform.projectConfig.vars.environment}`,
+  description: "Table creation conditional on environment variable"
+}
+
+SELECT
+  CURRENT_TIMESTAMP() as creation_time,
+  '${dataform.projectConfig.vars.environment}' as environment
+
+-- Example 10: Materialized View
+/* File: definitions/materialized_view.sqlx */
+config {
+    type: "view",
+    schema: "your_dataset",
+    name: "my_materialized_view",
+    description: "Example of a materialized view"
+    materialized: true,
+}
+SELECT 
+    id,
+    name,
+    count(*) as name_count
+FROM 
+    ${ref("my_simple_table")}
+GROUP BY id, name
+
+-- Example 11: Using tags for organizing resources
+/* File: definitions/tags_example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "my_tagged_table",
+  tags: ["team:marketing", "priority:high"],
+  description: "Example of using tags for organization"
+}
+
+SELECT
+    *
+FROM
+    ${ref("your_dataset", "source_table")}
+WHERE
+    category = 'tagged'
+
+-- Example 12: Documentation for a table
+/* File: definitions/documentation_example.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "my_documented_table",
+  description: "Table with documentation for columns",
+}
+
+/**
+ * @column id Unique identifier for each record
+ * @column name Name of the item
+ * @column category Category of the item
+ */
+SELECT
+    id,
+    name,
+    category
+FROM
+    ${ref("your_dataset", "source_table")}
+
+-- Example 13: Custom assertions with SQL
+/* File: definitions/custom_assertion.sqlx */
+config {
+  type: "assertion",
+  schema: "your_dataset",
+  name: "custom_check_for_duplicates"
+}
+
+SELECT
+    id,
+    COUNT(*) as num_duplicates
+FROM
+    ${ref("your_dataset", "source_table")}
+GROUP BY
+    id
+HAVING
+    COUNT(*) > 1
+
+-- Example 14: Using variables in SQLX
+/* File: definitions/sqlx_variables.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "my_variable_table",
+  vars: {
+    cutoff_date: "2023-01-01"
+  }
+}
+
+SELECT
+    *
+FROM
+    ${ref("your_dataset", "source_table")}
+WHERE
+    date >= DATE('${dataform.projectConfig.vars.cutoff_date}')
+
+-- Example 15: Declaration of a BigQuery table
+/* File: definitions/bigquery_table_declaration.sqlx */
+config {
+  type: "declaration",
+  schema: "your_dataset",
+  name: "declared_bq_table",
+  description: "Declaration of an existing BigQuery table"
+}
+-- This file makes Dataform aware of the table 'declared_bq_table' in your_dataset
+
+-- Example 16: Complex Incremental Table with Pre and Post Operations
+/* File: definitions/complex_incremental.sqlx */
+config {
+  type: "incremental",
+  schema: "your_dataset",
+  name: "my_complex_incremental_table",
+  description: "An incremental table with pre and post operations",
+  preOps: [
+    "DELETE FROM ${self()} WHERE event_date = current_date()" 
+  ],
+  postOps: [
+    "CREATE OR REPLACE TABLE ${self()} AS SELECT * FROM ${self()} WHERE event_date >= DATE_SUB(current_date(), INTERVAL 7 DAY)"
+  ]
+}
+
+SELECT
+    event_id,
+    event_timestamp,
+    event_name,
+    event_date
+FROM
+    ${ref("your_dataset", "source_events")}
+WHERE
+    ${when(incremental(), `event_timestamp > (SELECT MAX(event_timestamp) FROM ${self()})`)}
+
+-- Example 17: Using JavaScript to define multiple tables
+/* File: definitions/multiple_tables.js */
+// Generate a set of tables using JavaScript
+const baseConfig = {
+  type: "table",
+  schema: "your_dataset"
+};
+
+for (let i = 1; i <= 5; i++) {
+  const tableName = `table_${i}`;
+  const config = Object.assign({}, baseConfig, { name: tableName });
+
+  publish(tableName, config).query(ctx => `
+    SELECT ${i} as id, CURRENT_TIMESTAMP() as ts
+  `);
+}
+
+-- Example 18: Table with data transformations
+/* File: definitions/transformations.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "transformed_data",
+}
+
+SELECT
+  id,
+  UPPER(name) AS name_upper,
+  CAST(value AS FLOAT64) AS value_float,
+  TIMESTAMP_TRUNC(created_at, DAY) AS created_at_day
+FROM
+  ${ref("your_dataset", "source_table")}
+
+-- Example 19: Configuring table with additional BigQuery options
+/* File: definitions/bigquery_options.sqlx */
+config {
+  type: "table",
+  schema: "your_dataset",
+  name: "my_table_with_options",
+  bigquery: {
+    labels: {
+      "key1": "value1",
+      "key2": "value2"
+    },
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["id", "name"]
+  }
+}
+
+SELECT
+  id,
+  name,
+  created_at
+FROM
+  ${ref("your_dataset", "source_table")}
+
+-- Example 20: Complex Joins
+/* File: definitions/complex_joins.sqlx */
+config {
+    type: "table",
+    schema: "your_dataset",
+    name: "complex_join_example"
+}
+SELECT
+    o.order_id,
+    o.order_date,
+    c.customer_name,
+    oi.item_name,
+    oi.quantity,
+    oi.price
+FROM
+    ${ref("your_dataset", "orders")} o
+JOIN
+    ${ref("your_dataset", "customers")} c ON o.customer_id = c.customer_id
+LEFT JOIN
+    ${ref("your_dataset", "order_items")} oi ON o.order_id = oi.order_id
+WHERE
+    o.order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)

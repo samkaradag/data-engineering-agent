@@ -1,0 +1,124 @@
+
+Reusing code with includes
+Using global variables with JavaScript
+The following code sample shows definition of project_id and first_date constants in the includes/constants.js:
+
+const project_id = "project_id";
+const first_date = "'1970-01-01'";
+module.exports = {
+  project_id,
+  first_date
+};
+The following code sample shows the first_date constant referenced in the definitions/new_table.sqlx file:
+
+
+
+config {type: "table"}
+
+SELECT * FROM source_table WHERE date > ${constants.first_date}
+
+
+Creating a country mapping with JavaScript
+The following code sample shows the country_group custom function defined in the includes/mapping.js file:
+
+
+
+function country_group(country){
+  return `
+  case
+    when ${country} in ('US', 'CA') then 'NA'
+    when ${country} in ('GB', 'FR', 'DE', 'IT', 'PL', 'SE') then 'EU'
+    when ${country} in ('AU') then ${country}
+    else 'Other'
+  end`;
+}
+
+module.exports = {
+   country_group
+};
+
+The following code sample shows a table definition that uses the country_group function in the definitions/new_table.sqlx table definition file:
+
+
+
+config { type: "table"}
+
+SELECT
+  country AS country,
+  ${mapping.country_group("country")} AS country_group,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM ${ref("source_table")}
+
+GROUP BY 1, 2, 3
+The following code sample shows the query defined in definitions/new_table.sqlx compiled to SQL:
+
+
+
+SELECT
+  country AS country,
+  case
+    when country in ('US', 'CA') then 'NA'
+    when country in ('GB', 'FR', 'DE', 'IT', 'PL', 'SE') then 'EU'
+    when country in ('AU') then country
+    else 'Other'
+  end AS country_group,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM "dataform"."source_table"
+
+GROUP BY 1, 2, 3
+
+
+Generating a SQL script with a custom JavaScript function
+The following code sample shows the render_script custom function defined in includes/script_builder.js:
+
+
+
+function render_script(table, dimensions, metrics) {
+  return `
+      SELECT
+      ${dimensions.map(field => `${field} AS ${field}`).join(",")},
+      ${metrics.map(field => `sum(${field}) AS ${field}`).join(",\n")}
+      FROM ${table}
+      GROUP BY ${dimensions.map((field, i) => `${i + 1}`).join(", ")}
+    `;
+}
+
+module.exports = { render_script };
+
+
+The following code sample shows a table definition that uses the render_script function in the definitions/new_table.sqlx table definition file:
+
+
+
+config {
+    type: "table",
+    tags: ["advanced", "hourly"],
+    disabled: true
+}
+
+${script_builder.render_script(ref("source_table"),
+                               ["country", "device_type"],
+                               ["revenue", "pageviews", "sessions"]
+                               )}
+The following code sample shows the query defined in definitions/new_table.sqlx compiled to SQL:
+
+
+
+SELECT
+  country AS country,
+  device_type AS device_type,
+  sum(revenue) AS revenue,
+  sum(pageviews) AS pageviews,
+  sum(sessions) AS sessions
+
+FROM "dataform"."source_table"
+
+GROUP BY 1, 2

@@ -1,0 +1,6 @@
+name: ask_for_clarifications
+description: Asks follow-up clarification questions.
+template: |
+  {missing_information_prompt}
+  {user_request_prompt}
+  {general_follow_up_prompt}

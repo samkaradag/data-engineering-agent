@@ -1,0 +1,6 @@
+Some important considerations regarding dataform sqlx
+- Semi-colons are not allowed at the end of SQL statements. If compilation_errors message has  "Semi-colons are not allowed at the end of SQL statements." remove semi colons in sqlx.
+- Missing dependency detected error may be related to the error in the referenced file, fix the referenced file.
+- do not put comments at the end of lines in the config part or sql part.
+- do not use project_id in fully qualified tables.
+- use only definitions/ folder for file paths

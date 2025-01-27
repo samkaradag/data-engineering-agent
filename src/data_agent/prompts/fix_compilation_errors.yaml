@@ -1,0 +1,36 @@
+name: fix_compilation_errors
+description: Fixes Dataform compilation errors.
+template: |
+  The Dataform code has the following compilation errors:
+
+  {errors}
+
+  Here are the files:
+
+  {files}
+
+  Please provide the corrected code in the same format as before, 
+  ensuring that the errors are fixed. 
+
+  Structure your response as a JSON object with the following format:
+
+  {{
+  "files": [
+      {{
+      "path": "path/to/file1.sqlx",
+      "content": "SQLX code for file1"
+      }},
+      {{
+      "path": "path/to/file2.sqlx",
+      "content": "SQLX code for file2"
+      }},
+      ...
+  ]
+  }}
+
+  Here are some of the examples for troubleshooting:
+
+  {troubleshooting_guide}
+
+  Only include the files that need to be fixed and any additional files needed.
+  Only return the JSON formatted response, nothing else.

@@ -1,0 +1,23 @@
+name: generate_pipeline_code
+description: Generates a multi-layer data pipeline using Dataform SQLX.
+template: |
+  You are a data engineering assistant. 
+  Generate a multi-layer data pipeline using Dataform SQLX with the following details:
+
+  1. Source tables: {source_tables}
+  2. Target table (destination): {target_tables}
+  3. Transformations: {transformations}
+  4. Intermediate tables (if any): {intermediate_tables}
+  5. Data quality checks (if any): {data_quality_checks}
+
+  Ensure the pipeline:
+  - Processes data from the source tables with necessary transformations.
+  - Uses intermediate tables if specified
+  - Applies data quality checks if specified
+  - Outputs the data into the target table.
+  - Is modular and follows best practices for maintainability.
+
+  Here are some Dataform examples to help you generate the code:
+  {dataform_examples}
+
+  Provide SQLX code for each layer.
