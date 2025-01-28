@@ -5,12 +5,93 @@ import os
 
 from google.cloud import bigquery
 from utils.tracers import trace_calls
+from google.cloud.exceptions import NotFound
+
 
 class BigQueryTools:
     @trace_calls
     def __init__(self, project_id):
         self.bigquery_client = bigquery.Client(project=project_id)
         self.project_id = project_id
+
+    @trace_calls
+    def dataset_exists(self, dataset_name: str) -> bool:
+        """
+        Checks if a dataset exists in BigQuery.
+
+        Args:
+            dataset_name: The name of the dataset.
+
+        Returns:
+            True if the dataset exists, False otherwise.
+        """
+        try:
+            self.bigquery_client.get_dataset(dataset_name)
+            return True
+        except NotFound:
+            return False
+        
+    @trace_calls
+    def table_exists(self, dataset_name: str, table_name: str) -> bool:
+        """
+        Checks if a table exists in a BigQuery dataset.
+
+        Args:
+            dataset_name: The name of the dataset.
+            table_name: The name of the table.
+
+        Returns:
+            True if the table exists, False otherwise.
+        """
+        dataset_ref = self.bigquery_client.dataset(dataset_name, project=self.project_id)
+        table_ref = dataset_ref.table(table_name)
+        try:
+            self.bigquery_client.get_table(table_ref)
+            return True
+        except NotFound:
+            return False
+        
+
+    @trace_calls
+    def get_table_schema(self, dataset_name: str, table_name: str) -> list:
+        """
+        Retrieves the schema of a BigQuery table.
+
+        Args:
+            dataset_name: The name of the dataset.
+            table_name: The name of the table.
+
+        Returns:
+            A list of dictionaries representing the table schema, or an empty list if the table does not exist.
+        """
+        if not self.table_exists(dataset_name, table_name):
+            print(f"Table {dataset_name}.{table_name} does not exist.")
+            return []
+
+        dataset_ref = self.bigquery_client.dataset(dataset_name, project=self.project_id)
+        table_ref = dataset_ref.table(table_name)
+        table = self.bigquery_client.get_table(table_ref)
+        return table.schema
+
+    @trace_calls
+    def get_table_preview(self, dataset_name: str, table_name: str, limit: int = 5) -> list:
+        """
+        Retrieves a preview of the data in a BigQuery table.
+
+        Args:
+            dataset_name: The name of the dataset.
+            table_name: The name of the table.
+            limit: The maximum number of rows to retrieve.
+
+        Returns:
+            A list of dictionaries representing the table data, or an empty list if the table does not exist.
+        """
+        if not self.table_exists(dataset_name, table_name):
+            print(f"Table {dataset_name}.{table_name} does not exist.")
+            return []
+
+        rows = self.bigquery_client.list_rows(f"{self.project_id}.{dataset_name}.{table_name}", max_results=limit)
+        return [dict(row) for row in rows]
 
     @trace_calls
     def validate_dataset_name(self, dataset_name):

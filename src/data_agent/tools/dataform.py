@@ -2,19 +2,90 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import json
 import re
 import os
-
 from google.cloud import dataform_v1beta1
 from utils.tracers import trace_calls
 from utils.prompt_loader import load_prompt # Import the function
-
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 class DataformTools:
     @trace_calls
-    def __init__(self, project_id, location="us-central1"):
+    # def __init__(self, project_id, location="us-central1"):
+    #     self.project_id = project_id
+    #     self.location = location
+    #     self.client = dataform_v1beta1.DataformClient()
+    #     self.model = get_vertexai_model()
+    @trace_calls
+    def __init__(self, project_id, location="us-central1", model_name="gemini-2.0-flash-exp"):
+        # Initialize Vertex AI
+        vertexai.init(project=project_id, location=location)
+
+        self.model = GenerativeModel(model_name)
         self.project_id = project_id
         self.location = location
         self.client = dataform_v1beta1.DataformClient()
 
+    @trace_calls
+    def generate_pipeline_code(
+        self, source_tables, target_tables, transformations, intermediate_tables, data_quality_checks
+    ):
+        """
+        Generates a multi-layer data pipeline using Dataform SQLX.
+        Now it also handles intermediate tables and data quality checks.
+        """
+        # Load Dataform examples from the text file
+        with open("prompts/guides/dataform_examples.txt", "r") as f:
+            dataform_examples = f.read()
+        
+        prompt_template = load_prompt("generate_pipeline_code")
+
+        # Fill the prompt template
+        prompt = prompt_template.format(
+            source_tables=json.dumps(source_tables, indent=2),
+            target_tables=json.dumps(target_tables, indent=2),
+            transformations=json.dumps(transformations, indent=2),
+            intermediate_tables=json.dumps(intermediate_tables, indent=2),
+            data_quality_checks=json.dumps(data_quality_checks, indent=2),
+            dataform_examples=dataform_examples
+        )
+        # print("Prompt being sent to LLM:\n", prompt)
+
+        try:
+            response = self.model.generate_content(prompt)
+            pipeline_code = response.text.strip()
+            return {"pipeline_code": pipeline_code}
+
+        except Exception as e:
+            error_message = f"Error generating pipeline code: {e}"
+            print(error_message)
+            return {"error": error_message}
+        
+    @trace_calls
+    def identify_dataform_files(self, llm_output):
+        """
+        Uses the LLM to parse the output and identify the files to be uploaded to Dataform.
+        Constructs a JSON object with file paths and contents.
+        """
+
+        # Load the prompt template
+        prompt_template = load_prompt("identify_dataform_files")
+
+        # Fill the prompt template
+        prompt = prompt_template.format(llm_output=llm_output)
+
+        response = self.model.generate_content(prompt)
+        response_content = response.text.strip()
+        print(f"Parsed LLM Output:{response_content}")
+        try:
+            files_json = json.loads(
+                response_content.replace("`json\n", "").replace("`", "").replace(" \n", "")
+            )
+            return files_json  # Return the JSON object directly
+        except json.JSONDecodeError as e:
+            print(f"Error parsing LLM output: {e}")
+            # Handle the error, e.g., ask for clarification or retry
+            return None
+        
     @trace_calls
     def upload_and_compile_files(self, files, workspace_name):
         """
@@ -114,7 +185,7 @@ class DataformTools:
         """
         Asks the LLM to fix the compilation errors.
         """
-        from data_agent.tools.vertex_ai import VertexAITools
+        from tools.vertex_ai import VertexAITools
         vertexai_tools = VertexAITools(project_id=self.project_id)
 
         print("Fixing the issues..")

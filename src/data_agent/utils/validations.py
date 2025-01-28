@@ -55,11 +55,17 @@ class HandleUserRequestInput(BaseModel):
     user_request: str = Field(..., description="The user's request")
 
 
+# class HandleUserRequestOutput(BaseModel):
+#     parsed_request: Dict[str, Any] = Field(..., description="The parsed request")
+#     target_tables: Optional[List[Dict]] = Field(
+#         None, description="The inferred target tables for dimensions and facts"
+#     )
+
 class HandleUserRequestOutput(BaseModel):
-    parsed_request: Dict[str, Any] = Field(..., description="The parsed request")
-    target_tables: Optional[List[Dict]] = Field(
-        None, description="The inferred target tables for dimensions and facts"
-    )
+    parsed_request: Optional[Dict[str, Any]] = Field(None, description="Parsed request")
+    follow_up: Optional[str] = Field(None, description="Follow-up question")
+    error: Optional[str] = Field(None, description="Error message")
+    target_tables: Optional[List[Dict[str, str]]] = Field(None, description="Target tables")
 
 
 class GeneratePipelineCodeInput(BaseModel):
